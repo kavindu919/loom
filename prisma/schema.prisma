@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  githubId     Int          @unique
+  username     String
+  email        String       @unique
+  avatarUrl    String?
+  accessToken  String?
+  refreshToken String?
+  repositories Repository[]
+  reviews      Review[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Repository {
+  id         String      @id @default(uuid()) @db.Uuid
+  githubId   Int         @unique
+  name       String?
+  fullName   String?
+  owner      String?
+  isActive   Boolean     @default(true)
+  webhookId  Int
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews    Review[]
+  customRule CustomRule?
+  userId     String      @db.Uuid
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Review {
+  id             String          @id @default(uuid()) @db.Uuid
+  prNumber       Int
+  prTitle        String
+  prUrl          String
+  status         Status
+  filesAnalyzed  Int
+  issuesFound    Int
+  suggestions    Int
+  startedAt      DateTime
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  userId         String          @db.Uuid
+  repositoryId   String          @db.Uuid
+  reviewComments ReviewComment[]
+  reviewMetrics ReviewMetric[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository     Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+}
+
+model CustomRule {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String
+  description  String
+  pattern      String
+  severity     Severity
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId String     @unique @db.Uuid
+}
+
+model ReviewComment {
+  id              String   @id @default(uuid()) @db.Uuid
+  filePath        String
+  line            Int
+  severity        Severity
+  category        String
+  message         String
+  suggestion      String
+  postedToGithub  Boolean @default(false)
+  githubCommentId Int?
+  reviewId        String   @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  review          Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+model ReviewMetric {
+  id         String   @id @default(uuid()) @db.Uuid
+  metricType String
+  value      Float
+  reviewId   String   @db.Uuid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+enum Status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum Severity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
